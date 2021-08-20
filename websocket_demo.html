@@ -1,0 +1,139 @@
+<!---------------------------------------------------------------------------->
+<!--             Copyright (C) by TEC-IT Datenverarbeitung GmbH             -->
+<!--                          http://www.tec-it.com                         -->
+
+<!--                           All rights reserved.                         -->
+<!--                                                                        -->
+<!--    This source code is only intended as a supplement to the references -->
+<!--      and related electronic documentation provided with the product.   -->
+<!--                See these sources for detailed information.             -->  
+<!---------------------------------------------------------------------------->
+<html>
+	<head>
+		<script>
+		
+			// Display the received data or error messages
+  		function log(s)
+			{
+				var log = document.getElementById('log');
+				log.innerHTML = log.innerHTML + s + "<i>";
+			}
+			
+			var TIMEOUT = 60*1000; // 5 seconds timeout 5*1000
+			var wsUri;
+			var websocket;
+			var open = false;
+			
+			// Register connect button
+			function init()
+			{
+				document.getElementById('connect').addEventListener("click",connect);
+			}
+			
+			// Connect - establish WebSocket connection
+			function connect(){
+			
+			  var sIP = document.getElementById('ip').value;
+				var sPort = document.getElementById('port').value;
+				
+				if (sIP === "" || sPort === "")
+				{
+					log ("Please enter IP address (e.g. 172.16.100.24) and a port number (e.g. 9999)");
+				}
+				else
+				{
+					wsUri = "ws://"+ sIP +":"+ sPort +"/";
+					log("Connecting to "+wsUri+"...");
+				
+					websocket = new WebSocket(wsUri);
+					websocket.onopen = onopen;
+					websocket.onerror = onerror;
+					websocket.onmessage = onmessage;
+					websocket.onclose = onclose;
+				
+					// avoid endless connection retries
+					window.setTimeout(onConnectionTimeout, TIMEOUT);
+				}
+			}
+			
+			// Event handler for timout
+			function onConnectionTimeout()
+			{
+			  // Conection established ? 
+				if (!open)
+				{
+					log("Connection to "+wsUri+" timed out.");
+					websocket.close();
+				}
+			}
+			
+			// Event handler called after successful open
+			function onopen()
+			{
+				open = true;
+				log("Connection to "+wsUri+" opened. Scan a barcode now!");
+			}
+			
+			// Event handler called on error
+			function onerror(event)
+			{
+				log("Unknown error. Open debugger console for more information.");
+			}
+			
+			// Event handler called for each received data packet
+			function onmessage(event)
+			{
+				var data = event.data;
+				
+				// Wireless Barcode Scanner sends a Byte array which is received as Blob
+				if (data == "[object Blob]")
+				{
+					var myReader = new FileReader();
+					// Handler executed once reading (blob content referenced to a variable) from blob is finished. 
+					myReader.addEventListener("loadend", function(e)
+						{
+							log(e.target.result);//prints a string
+						});
+					//start the reading process.
+					myReader.readAsText(data);
+				}
+				else
+				{
+					log (data); // should not happen when using Wireless Barcode Scanner 
+				}
+			}
+			
+			// Event handler called after connection was closed
+			function onclose(code, reason, wasClean)
+			{
+				log("Connection to "+wsUri+" closed.");
+			}
+			
+			// Register init
+			window.addEventListener("load", init, false);
+		</script>
+		
+	</head>
+	<body>
+	  <h1>WebSocket Sample</h1>
+		<p>Copyright &copy; by TEC-IT Datenverarbeitung GmbH, <a href="http://www.tec-it.com" title="Barcode and Data Acquisition Software" target="_blank">http://www.tec-it.com</a></p>
+		<br/><br/>
+		<p>
+		The Android app <a href="https://play.google.com/store/apps/details?id=com.tecit.android.bluescanner.demo&hl=en" title="Wireless Barcode Scanner on Google Play" target="_blank">Wireless Barcode Scanner</a> provides a WebSocket server for one simultaneous client connection at a time. This sample implements a WebSocket client which receives data scanned with this app.  
+		</p>
+		<ol>
+		<li>Start <i>Wireless Barcode Scanner</i></li> 
+		<li>In the settings of <i>Wireless Barcode Scanner</i> adjust the connection type <i>WebSocket Server (Internet)</i> and choose the required <i>Port</i>.</li> 
+		<li>Enter the IP address and the port number of the smart phone in the edit-fields below and press <i>Connect</i>. Each scanned bar-code will be displayed on this page. </li>
+		</ol>
+		<p>
+		IP: <input type="text" id='ip' placeholder='172.16.100.24'/>
+		Port: <input type="text" id='port' placeholder='9999'/>
+		<input type="submit" id='connect' value="Connect"/>
+		</p>
+		<i>
+		<form id="log">
+			<input type="text" id="log">
+		</form>
+	</body>
+</html>
